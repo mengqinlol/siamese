@@ -12,7 +12,7 @@ from PIL import Image
 #Configuration
 IMAGE_SIZE = [220, 220]
 BATCH_SIZE = 32
-MODELNAME = "CNN_model_animal2"+".pt"
+MODELNAME = "CNN_model_imagenet"+".pt"
 EPOCH = 300
 
 
@@ -68,10 +68,12 @@ def runTrain():
     #         img = trans(img)
     #         train_data.append((img, label))
 
-    for label in tqdm(os.listdir('animal/raw-img')):
+    dataset_path = 'datasets/imagenet-tiny/train'
+
+    for label in tqdm(os.listdir(dataset_path)):
         cnt = 0
-        for img_name in os.listdir(f'animal/raw-img/{label}'):
-            img_path = f'animal/raw-img/{label}/{img_name}'
+        for img_name in os.listdir(f'{dataset_path}/{label}'):
+            img_path = f'{dataset_path}/{label}/{img_name}'
             img = Image.open(img_path).convert('RGB')
             img = trans(img)
             train_data.append((img, label))
@@ -80,7 +82,7 @@ def runTrain():
     trainDataset = SiameseDataset(img_label_list = train_data, forTrain = True)
     trainDataloader = DataLoader(trainDataset, batch_size=BATCH_SIZE, shuffle=True)
     criterion = TripletLoss()
-    optimizer = optim.Adam(net.parameters(), lr=0.0000005)
+    optimizer = optim.Adam(net.parameters(), lr=0.000001)
     for epoch in range(EPOCH):
         loss_sum = 0.0
         loss_to_show = 0.0
