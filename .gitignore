@@ -1,0 +1,5 @@
+/datasets
+./model*
+/.vscode
+/__pycache__
+*.pt*
