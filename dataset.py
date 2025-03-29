@@ -23,6 +23,14 @@ class SiameseDataset(Dataset):
             for img, label in self.image_label_list:
                 self.label_to_img.setdefault(label, []).append(img)
             print(len(self.label_to_img.keys()))
+        
+        self.label_to_label_possibilities =[[1.0 for _ in range(len(self.label_to_img.keys()))] for _ in range(len(self.label_to_img.keys()))]
+
+    def set_zero_loss_label_combinations(self, label1_idx, label2_idx):
+        if self.label_to_label_possibilities[label1_idx][label2_idx] < 0.2:
+            return
+        self.label_to_label_possibilities[label1_idx][label2_idx] *= 0.9
+        self.label_to_label_possibilities[label2_idx][label1_idx] *= 0.9
 
     def __len__(self):
         return len(self.image_label_list)
@@ -31,19 +39,24 @@ class SiameseDataset(Dataset):
             anchor_item = self.image_label_list[idx]
             anchor = anchor_item[0]
             ancher_label = anchor_item[1]
+            ancher_label_idx = list(self.label_to_img.keys()).index(ancher_label)
             positive = random.choice(self.label_to_img[ancher_label])
             # while positive == anchor:
             #     positive = random.choice(self.label_to_img[ancher_label])
             
-            negative_label = random.choice(list(self.label_to_img.keys()))
-            while negative_label == ancher_label:
-                negative_label = random.choice(list(self.label_to_img.keys()))
+            while True:
+                negative_label_idx = random.randint(0, len(self.label_to_img.keys())-1)
+                negative_label = list(self.label_to_img.keys())[negative_label_idx]
+                if negative_label == ancher_label: continue
+                if random.random() < self.label_to_label_possibilities[ancher_label_idx][negative_label_idx]: break
+                # print("possibilities" + str(self.label_to_label_possibilities[ancher_label_idx][negative_label_idx]))
+
             negative = random.choice(self.label_to_img[negative_label])
             if self.transform:
                 anchor = self.transform(anchor)
                 positive = self.transform(positive)
                 negative = self.transform(negative)
-            return anchor, positive, negative
+            return anchor, positive, negative, ancher_label_idx, negative_label_idx
         else:
             img = self.image_label_list[idx][0]
             label = self.image_label_list[idx][1]

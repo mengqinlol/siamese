@@ -27,7 +27,7 @@ class TripletLoss(nn.Module):
 
         # print(APDistance, ANDistance)
         loss = F.relu(APDistance - ANDistance + self.margin)
-        return loss.sum()
+        return loss.sum(), loss
     
 def save_loss(loss):
     with open('res_loss.txt', 'a') as f:
@@ -68,7 +68,8 @@ def runTrain():
     #         img = trans(img)
     #         train_data.append((img, label))
 
-    dataset_path = 'datasets/imagenet-tiny/train'
+    # dataset_path = 'datasets/imagenet-tiny/train'
+    dataset_path = 'datasets/animal/raw-img'
 
     for label in tqdm(os.listdir(dataset_path)):
         cnt = 0
@@ -88,15 +89,18 @@ def runTrain():
         loss_to_show = 0.0
         pbar = tqdm(enumerate(trainDataloader), total=len(trainDataloader), desc=f'Epoch {epoch+1}/{EPOCH}')
         for i, data in pbar:
-            anchor, positive, negative = data
+            anchor, positive, negative, anchor_label_idx, negative_label_idx = data
             anchor = anchor.to(device)
             positive = positive.to(device)
             negative = negative.to(device)
             anchor_out, positive_out, negative_out = net.forward_triple(anchor, positive, negative)
             optimizer.zero_grad()
-            loss = criterion(anchor_out, positive_out, negative_out)
+            loss, loss_list = criterion(anchor_out, positive_out, negative_out)
             loss.backward()
             optimizer.step()
+            for idx, loss_item in enumerate(loss_list):
+                if loss_item == 0.0:
+                    trainDataset.set_zero_loss_label_combinations(anchor_label_idx[idx], negative_label_idx[idx])
             loss_sum += loss.item()
             loss_to_show = loss.item()
             pbar.set_postfix(loss=f'{loss_to_show:.10f}', refresh=True) 
