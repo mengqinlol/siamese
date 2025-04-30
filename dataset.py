@@ -23,8 +23,7 @@ class SiameseDataset(Dataset):
             for img, label in self.image_label_list:
                 self.label_to_img.setdefault(label, []).append(img)
             print(len(self.label_to_img.keys()))
-        
-        self.label_to_label_possibilities =[[1.0 for _ in range(len(self.label_to_img.keys()))] for _ in range(len(self.label_to_img.keys()))]
+            self.label_to_label_possibilities =[[1.0 for _ in range(len(self.label_to_img.keys()))] for _ in range(len(self.label_to_img.keys()))]
 
     def set_zero_loss_label_combinations(self, label1_idx, label2_idx):
         if self.label_to_label_possibilities[label1_idx][label2_idx] < 0.2:

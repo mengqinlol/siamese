@@ -1,7 +1,9 @@
 from test import *
+import train2
+import train
 import warnings
 warnings.filterwarnings("ignore")
 
 if __name__ == '__main__':
-   runTrain()
-   # runTest()
+    train.runTrain()
+    train2.runTrain2()

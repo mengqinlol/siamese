@@ -1,3 +1,4 @@
+import json
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -11,9 +12,10 @@ from PIL import Image
 
 #Configuration
 IMAGE_SIZE = [220, 220]
-BATCH_SIZE = 32
-MODELNAME = "CNN_model_imagenet"+".pt"
-EPOCH = 300
+BATCH_SIZE = 16
+NAME = "CNN_model_animal_croped"
+MODELNAME = NAME +".pt"
+EPOCH = 1000
 
 
 class TripletLoss(nn.Module):
@@ -30,14 +32,15 @@ class TripletLoss(nn.Module):
         return loss.sum(), loss
     
 def save_loss(loss):
-    with open('res_loss.txt', 'a') as f:
+    with open(f'{NAME}_loss.txt', 'a') as f:
         f.write(str(loss) + '\n')
 
 def runTrain():
 
     device = torch.device("cuda" if torch.cuda.is_available else "cpu")
     
-    net = torch.load("latest_CNN_trainedmodel_animal copy.pt")
+    # net = torch.load("latest_CNN_trainedmodel_animal copy.pt")
+    net = SiameseNetwork_CNN()
     net = net.to(device)
 
     print(device)
@@ -69,21 +72,38 @@ def runTrain():
     #         train_data.append((img, label))
 
     # dataset_path = 'datasets/imagenet-tiny/train'
-    dataset_path = 'datasets/animal/raw-img'
+    dataset_path = 'datasets/bndbox_image'
+
+    # for label in tqdm(os.listdir(dataset_path)):
+    #     cnt = 0
+    #     for img_name in os.listdir(f'{dataset_path}/{label}'):
+    #         img_path = f'{dataset_path}/{label}/{img_name}'
+    #         img = Image.open(img_path).convert('RGB')
+    #         img = trans(img)
+    #         train_data.append((img, label))
+    #         cnt += 1
 
     for label in tqdm(os.listdir(dataset_path)):
         cnt = 0
+        box_json = json.load(open(f'datasets/bndbox_anno/{label}.json'))
         for img_name in os.listdir(f'{dataset_path}/{label}'):
             img_path = f'{dataset_path}/{label}/{img_name}'
             img = Image.open(img_path).convert('RGB')
-            img = trans(img)
-            train_data.append((img, label))
+            for box in box_json[img_name]:
+                box_xy = box["bndbox"]
+                box_tuple = (box_xy["xmin"], box_xy["ymin"], box_xy["xmax"], box_xy["ymax"])
+                croped_img = img.crop(box_tuple)
+                # croped_img.show()
+                croped_img = trans(croped_img)
+                train_data.append((croped_img, label))
+                # croped_img.show()
             cnt += 1
+
 
     trainDataset = SiameseDataset(img_label_list = train_data, forTrain = True)
     trainDataloader = DataLoader(trainDataset, batch_size=BATCH_SIZE, shuffle=True)
     criterion = TripletLoss()
-    optimizer = optim.Adam(net.parameters(), lr=0.000001)
+    optimizer =  optim.AdamW(net.parameters(), lr=0.00001, weight_decay=0.0005)
     for epoch in range(EPOCH):
         loss_sum = 0.0
         loss_to_show = 0.0
